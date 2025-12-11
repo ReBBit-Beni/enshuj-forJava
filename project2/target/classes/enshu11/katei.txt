@@ -1,0 +1,9 @@
+1,Main.main()で実行開始(public static void main(String[] args)からスタート)
+2,Pokemon p2 = new Zenigame();でZenigameクラスのコンタラクタが呼び出される。ここでp2にZenigameのインスタンスが格納される。
+3,while ループ内でp2.attakedBy(p1)が呼び出される
+while (true) {
+    p2.attackedBy(p1); // ← ここでZenigameに攻撃
+    ...
+}
+4,Pokemon.attakedBy()の中でgetDefensePower()を呼ぶ
+5,Java では 実行時のオブジェクトの型 に応じてメソッドが動的バインディングされるため、Pokemon 型の p2 でも、実体が Zenigame の場合は Zenigame.getDefensePower() が呼ばれます
