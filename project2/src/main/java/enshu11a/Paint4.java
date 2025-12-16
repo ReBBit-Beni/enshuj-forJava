@@ -21,7 +21,7 @@ public class Paint4 extends JFrame {
     
     // 図形選択
     ButtonGroup bg;
-    JRadioButton r1, r2, r3, r4, r5;
+    JRadioButton r1, r2, r3, r4, r5, r6;
     
     // 色選択
     ButtonGroup colorBg;
@@ -51,11 +51,12 @@ public class Paint4 extends JFrame {
         p.colorBg = new ButtonGroup();
         
         // --- 図形選択ラジオボタンの設定（インスタンス生成） ---
-        p.r1 = new JRadioButton("ドット", true);
+        p.r1 = new JRadioButton("ドット");
         p.r2 = new JRadioButton("円");
         p.r3 = new JRadioButton("四角");
         p.r4 = new JRadioButton("線");
         p.r5 = new JRadioButton("テキスト");
+        p.r6 = new JRadioButton("筆", true);
         p.bg = new ButtonGroup();
 
         // --- 操作ボタンの設定（インスタンス生成） ---
@@ -93,6 +94,7 @@ public class Paint4 extends JFrame {
         p.bg.add(p.r3);
         p.bg.add(p.r4);
         p.bg.add(p.r5);
+        p.bg.add(p.r6);
 
         // 操作ボタン
         p.pixelModeCbx.addActionListener(canvas);
@@ -109,6 +111,7 @@ public class Paint4 extends JFrame {
         toolBar.add(p.r3);
         toolBar.add(p.r4);
         toolBar.add(p.r5);
+        toolBar.add(p.r6);
         toolBar.addSeparator();
         toolBar.add(p.pixelModeCbx);
         toolBar.addSeparator(new Dimension(0, 10));

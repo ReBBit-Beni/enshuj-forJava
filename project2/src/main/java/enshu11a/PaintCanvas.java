@@ -23,30 +23,31 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 // 描画キャンバス
-public class PaintCanvas extends JPanel implements MouseListener,MouseMotionListener,ActionListener {
-    
+public class PaintCanvas extends JPanel implements MouseListener, MouseMotionListener, ActionListener {
+
     // メンバー変数
     Figure obj = null;
     double x, y;
     Paint4 p4;
     ArrayList<Figure> objList;
-    int mode = 0;
+    
+    int mode = 4;
 
     // ピクセルアートモード用の設定
     private final int GRID_SIZE = 20;
     private boolean isPixelMode = false;
-    
+
     PaintCanvas(Paint4 p, String fname) {
         this.p4 = p;
         objList = new ArrayList<>();
-        
+
         addMouseListener(this);
         addMouseMotionListener(this);
-        
+
         if (fname != null) {
             load(fname);
         }
-        
+
         updateColorDisplay();
     }
 
@@ -56,71 +57,77 @@ public class PaintCanvas extends JPanel implements MouseListener,MouseMotionList
         Point2D p = e.getPoint();
         x = snapToGrid(p.getX());
         y = snapToGrid(p.getY());
-        
-        mode = 0;
+
         obj = null;
+        Color currentColor = getCurrentColor();
 
         // 図形モードの判定
         if (p4.r1.isSelected()) {
-            mode = 1;
-            obj = new Dot();
+            mode = 1; // Dot (ピクセルアート用)
         } else if (p4.r2.isSelected()) {
-            mode = 2;
+            mode = 2; // Circle
             obj = new Circle();
         } else if (p4.r3.isSelected()) {
-            mode = 2;
+            mode = 2; // Rect
             obj = new Rect();
         } else if (p4.r4.isSelected()) {
-            mode = 2;
+            mode = 2; // Line
             obj = new Line();
         } else if (p4.r5.isSelected()) {
-            mode = 3;
+            mode = 3; // Text
             String input = JOptionPane.showInputDialog(this, "テキストを入力してください:", "テキスト入力", JOptionPane.PLAIN_MESSAGE);
-            
             if (input != null && !input.trim().isEmpty()) {
                 obj = new Text(input);
             }
+        } else if (p4.r6.isSelected()) {
+            mode = 4; // ★筆モード
         }
-        
+
         if (obj != null) {
             obj.moveto(x, y);
-            obj.setColor(getCurrentColor());
+            obj.setColor(currentColor);
 
-            if (mode == 3) {
+            if (mode == 3) { // Textはクリック地点で確定
                 objList.add(obj);
                 obj = null;
-                mode = 0;
             }
         }
-        
+
         repaint();
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
         Point2D p = e.getPoint();
-        
         double currentX = snapToGrid(p.getX());
         double currentY = snapToGrid(p.getY());
-        
-        if (obj != null) {
-            if (mode == 1) { // Dot (ドット絵の塗りつぶし)
-                
-                // ★修正: 座標が変わったとき (XまたはYが異なる) のみ描画
-                if (currentX != this.x || currentY != this.y) {
-                    this.x = currentX;
-                    this.y = currentY;
-                    
-                    obj.moveto(this.x, this.y);
-                    objList.add(obj);
-                    
-                    // 次のドットオブジェクトを作成
-                    obj = new Dot();
-                    obj.setColor(getCurrentColor());
-                    obj.moveto(this.x, this.y);
-                }
-            } else if (mode == 2) {
+        Color currentColor = getCurrentColor();
+
+        if (mode == 1) { // Dot (ピクセルアートの連続塗りつぶし)
+            if (currentX != this.x || currentY != this.y) {
+                this.x = currentX;
+                this.y = currentY;
+                Dot d = new Dot();
+                d.moveto(this.x, this.y);
+                d.setColor(currentColor);
+                objList.add(d);
+            }
+        } else if (mode == 2) { // Circle, Rect, Line (ドラッグでサイズ変更)
+            if (obj != null) {
                 obj.setWH(currentX - this.x, currentY - this.y);
+            }
+        } else if (mode == 4) { // ★筆モード (短い線分の連続)
+            if (currentX != this.x || currentY != this.y) {
+                // 前の地点(x, y)から現在の地点(currentX, currentY)まで線を引く
+                Line l = new Line();
+                l.moveto(this.x, this.y);
+                l.setWH(currentX - this.x, currentY - this.y);
+                l.setColor(currentColor);
+                objList.add(l);
+
+                // 現在の地点を次の「開始地点」にする
+                this.x = currentX;
+                this.y = currentY;
             }
         }
         repaint();
@@ -128,27 +135,17 @@ public class PaintCanvas extends JPanel implements MouseListener,MouseMotionList
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        Point2D p = e.getPoint();
-        x = snapToGrid(p.getX());
-        y = snapToGrid(p.getY());
-
-        if (obj != null) {
-            if (mode == 1) {
-                obj.moveto(x, y);
-            } else if (mode == 2) {
-                obj.setWH(x - obj.x, y - obj.y);
-            }
-            
-            if (mode == 1 || mode == 2) {
-                objList.add(obj);
-                obj = null;
-            }
+        if (obj != null && mode == 2) {
+            Point2D p = e.getPoint();
+            double lastX = snapToGrid(p.getX());
+            double lastY = snapToGrid(p.getY());
+            obj.setWH(lastX - this.x, lastY - this.y);
+            objList.add(obj);
+            obj = null;
         }
-        
-        mode = 0;
         repaint();
     }
-    //
+
     @Override public void mouseEntered(MouseEvent e) {}
     @Override public void mouseExited(MouseEvent e) {}
     @Override public void mouseClicked(MouseEvent e) {}
@@ -157,7 +154,14 @@ public class PaintCanvas extends JPanel implements MouseListener,MouseMotionList
     // --- ボタンアクション ---
     @Override
     public void actionPerformed(ActionEvent e) {
-        // ... (クリア、終了、保存、読込、Undoの処理は省略) ...
+        // モード切替ラジオボタンの処理
+        if (e.getSource() == p4.r1) mode = 1;
+        else if (e.getSource() == p4.r2) mode = 2;
+        else if (e.getSource() == p4.r3) mode = 2;
+        else if (e.getSource() == p4.r4) mode = 2;
+        else if (e.getSource() == p4.r5) mode = 3;
+        else if (e.getSource() == p4.r6) mode = 4;
+
         if (e.getSource() == p4.endBtn) {
             save("paint.dat");
             System.exit(0);
@@ -179,88 +183,64 @@ public class PaintCanvas extends JPanel implements MouseListener,MouseMotionList
                 objList.remove(objList.size() - 1);
             }
             repaint();
-        }
-        // ピクセルアートモードの切り替え処理
-        else if (e.getSource() == p4.pixelModeCbx) {
+        } else if (e.getSource() == p4.pixelModeCbx) {
             isPixelMode = p4.pixelModeCbx.isSelected();
             repaint();
-        }
-        // カスタム色ピッカーボタンの処理
-        else if (e.getSource() == p4.pickColorBtn) {
+        } else if (e.getSource() == p4.pickColorBtn) {
             Color newColor = JColorChooser.showDialog(this, "カスタム色の選択", p4.selectedCustomColor);
             if (newColor != null) {
                 p4.selectedCustomColor = newColor;
-                p4.colorCustomR.setSelected(true); // ★重要: カスタム色を選択状態にする
+                p4.colorCustomR.setSelected(true);
             }
-            updateColorDisplay(); // ★追加: UI表示を更新
-        }
-        // ★修正: 色ラジオボタンがクリックされた場合の処理
-        else if (e.getSource() == p4.colorR || e.getSource() == p4.colorB || e.getSource() == p4.colorG || e.getSource() == p4.colorCustomR) {
-            updateColorDisplay(); // UI表示を更新
+            updateColorDisplay();
+        } else if (e.getSource() == p4.colorR || e.getSource() == p4.colorB || e.getSource() == p4.colorG || e.getSource() == p4.colorCustomR) {
+            updateColorDisplay();
         }
     }
-    
+
     // --- 描画処理 ---
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
-        
-        // 確定済みオブジェクトの描画と現在作成中の要素の描画は省略
+
         for (Figure figure : objList) {
             figure.paint(g2);
         }
-        if (obj != null && mode > 1) {
+        // mode 2 (図形) の作成中プレビュー
+        if (obj != null && mode == 2) {
             obj.paint(g2);
         }
-        
-        // グリッド線の描画
+
         if (isPixelMode) {
             g2.setColor(Color.LIGHT_GRAY);
             g2.setStroke(new BasicStroke(1.0f));
-
             int width = getWidth();
             int height = getHeight();
-
-            for (int x = 0; x < width; x += GRID_SIZE) {
-                g2.drawLine(x, 0, x, height);
-            }
-
-            for (int y = 0; y < height; y += GRID_SIZE) {
-                g2.drawLine(0, y, width, y);
-            }
+            for (int i = 0; i < width; i += GRID_SIZE) g2.drawLine(i, 0, i, height);
+            for (int j = 0; j < height; j += GRID_SIZE) g2.drawLine(0, j, width, j);
         }
     }
 
-    // --- ヘルパーメソッド ---
     private Color getCurrentColor() {
-        if (p4.colorR.isSelected()) {
-            return Color.RED;
-        } else if (p4.colorB.isSelected()) {
-            return Color.BLUE;
-        } else if (p4.colorG.isSelected()) {
-            return Color.GREEN;
-        } else if (p4.colorCustomR.isSelected()) {
-            return p4.selectedCustomColor;
-        }
+        if (p4.colorR.isSelected()) return Color.RED;
+        if (p4.colorB.isSelected()) return Color.BLUE;
+        if (p4.colorG.isSelected()) return Color.GREEN;
+        if (p4.colorCustomR.isSelected()) return p4.selectedCustomColor;
         return Color.BLACK;
     }
 
     private double snapToGrid(double coord) {
-        if (isPixelMode) {
-            return Math.round(coord / GRID_SIZE) * GRID_SIZE;
-        }
+        if (isPixelMode) return Math.round(coord / GRID_SIZE) * GRID_SIZE;
         return coord;
     }
-    
-    // ★追加: UIの文字色・背景色を更新するロジック
+
     private Color getContrastColor(Color color) {
         double y = (0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue()) / 255;
         return (y > 0.5) ? Color.BLACK : Color.WHITE;
     }
-    
+
     private void updateColorDisplay() {
-        // 1. すべてのボタンの表示をリセット
         p4.colorR.setForeground(Color.BLACK);
         p4.colorB.setForeground(Color.BLACK);
         p4.colorG.setForeground(Color.BLACK);
@@ -268,53 +248,32 @@ public class PaintCanvas extends JPanel implements MouseListener,MouseMotionList
         p4.pickColorBtn.setForeground(Color.BLACK);
         p4.pickColorBtn.setBackground(null);
 
-        // 2. 選択されているボタンの文字色をその色自身に変更
-        if (p4.colorR.isSelected()) {
-            p4.colorR.setForeground(Color.RED);
-        } else if (p4.colorB.isSelected()) {
-            p4.colorB.setForeground(Color.BLUE);
-        } else if (p4.colorG.isSelected()) {
-            p4.colorG.setForeground(Color.GREEN);
-        } else if (p4.colorCustomR.isSelected()) {
+        if (p4.colorR.isSelected()) p4.colorR.setForeground(Color.RED);
+        else if (p4.colorB.isSelected()) p4.colorB.setForeground(Color.BLUE);
+        else if (p4.colorG.isSelected()) p4.colorG.setForeground(Color.GREEN);
+        else if (p4.colorCustomR.isSelected()) {
             Color customColor = p4.selectedCustomColor;
             p4.colorCustomR.setForeground(customColor);
-            
             p4.pickColorBtn.setForeground(getContrastColor(customColor));
             p4.pickColorBtn.setBackground(customColor);
         }
-        
         p4.repaint();
     }
 
-    // --- ファイル入出力（シリアライズ） ---
-    // ... (save/load メソッドは省略) ...
     public void save(String fname) {
-        try {
-            FileOutputStream fos = new FileOutputStream(fname);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fname))) {
             oos.writeObject(objList);
-            oos.close();
-            fos.close();
         } catch (IOException e) {
-            System.err.println("ファイルの保存中にエラーが発生しました: " + e.getMessage());
+            System.err.println("保存エラー: " + e.getMessage());
         }
     }
+
     @SuppressWarnings("unchecked")
     public void load(String fname) {
-        try {
-            FileInputStream fis = new FileInputStream(fname);
-            ObjectInputStream ois = new ObjectInputStream(fis);
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(fname))) {
             objList = (ArrayList<Figure>) ois.readObject();
-            ois.close();
-            fis.close();
-            JOptionPane.showMessageDialog(this, "ファイル「" + fname + "」を読み込みました。", "読込成功", JOptionPane.INFORMATION_MESSAGE);
-        } catch (java.io.FileNotFoundException e) {
-            JOptionPane.showMessageDialog(this, "ファイルが見つかりません: " + fname + "\n(先に保存してください)", "読込エラー", JOptionPane.ERROR_MESSAGE);
-            System.err.println("ファイルの読み込み中にエラーが発生しました: " + e.getMessage());
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "ファイルの読み込み中にエラーが発生しました。\nファイルが破損している可能性があります。", "読込エラー", JOptionPane.ERROR_MESSAGE);
-        } catch (ClassNotFoundException e) {
-            JOptionPane.showMessageDialog(this, "読み込んだファイルに不明なクラスが含まれています。\nクラスパスを確認してください。", "読込エラー", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "読込エラー", "エラー", JOptionPane.ERROR_MESSAGE);
         }
         repaint();
     }
