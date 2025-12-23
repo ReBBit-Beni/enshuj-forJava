@@ -1,6 +1,6 @@
 package enshu11a;
 
-import java.io.*;
+import java.io.Serializable;
 
 public class Coord implements Serializable {
     // メンバー変数
@@ -18,6 +18,4 @@ public class Coord implements Serializable {
         this.x = x;
         this.y = y;
     }
-
-    // public void paint(Graphics2D g){} // 描画処理用
 }

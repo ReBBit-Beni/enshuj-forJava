@@ -1,28 +1,15 @@
 package enshu11a;
 
-import java.awt.*;
-import java.awt.geom.*;
+import java.awt.BasicStroke;
+import java.awt.Graphics2D;
+import java.awt.geom.Rectangle2D;
 
-/**
- * 四角形（矩形）を描画するクラス。
- * Figure クラスを継承し、Rectangle2D を使用して描画します。
- */
 public class Rect extends Figure {
     
-    // シリアライズ対応のため ID を設定（省略時はコンパイラが警告を出します）
     private static final long serialVersionUID = 1L;
 
-    // 描画に使用する矩形オブジェクト
-    // 描画時に一時的に使用するオブジェクトなので、メンバー変数である必要は低いですが、残しておきます。
-    Rectangle2D f; 
+    Rectangle2D f;
 
-    /**
-     * 描画のための処理を行います。
-     * setWHで決定された左上隅 (x, y) と正の幅 (w)・高さ (h) を基に
-     * 四角形を描画します。
-     *
-     * @param g Graphics2D オブジェクト
-     */
     @Override
     protected void draw(Graphics2D g) {
         // ★修正点: setWHで計算された x, y, w, h をそのまま使用する
@@ -39,13 +26,6 @@ public class Rect extends Figure {
         g.draw(f); // アウトラインを描画
     }
     
-    /**
-     * PaintCanvasから相対変位を受け取り、長方形の左上座標とサイズを計算する。
-     * どの方向へドラッグされても正しく描画できるようにする。
-     * (このロジックは Figureクラスの setWH 処理を前提としているか、
-     * Coord クラスのメソッドをオーバーライドしている可能性があります。
-     * ここでは Rect 専用に、以前の会話で作成したロジックを再実装します。)
-     */
     @Override
     public void setWH(double currentW, double currentH) {
         // 描画開始時（マウスプレス時）の座標を保持

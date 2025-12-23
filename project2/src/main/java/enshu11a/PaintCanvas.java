@@ -64,6 +64,11 @@ public class PaintCanvas extends JPanel implements MouseListener, MouseMotionLis
         // 図形モードの判定
         if (p4.r1.isSelected()) {
             mode = 1; // Dot (ピクセルアート用)
+
+            Dot d = new Dot();
+            d.moveto(x, y);
+            d.setColor(currentColor);
+            objList.add(d);
         } else if (p4.r2.isSelected()) {
             mode = 2; // Circle
             obj = new Circle();
@@ -80,7 +85,7 @@ public class PaintCanvas extends JPanel implements MouseListener, MouseMotionLis
                 obj = new Text(input);
             }
         } else if (p4.r6.isSelected()) {
-            mode = 4; // ★筆モード
+            mode = 4; // 筆モード
         }
 
         if (obj != null) {
@@ -92,7 +97,6 @@ public class PaintCanvas extends JPanel implements MouseListener, MouseMotionLis
                 obj = null;
             }
         }
-
         repaint();
     }
 
@@ -116,7 +120,7 @@ public class PaintCanvas extends JPanel implements MouseListener, MouseMotionLis
             if (obj != null) {
                 obj.setWH(currentX - this.x, currentY - this.y);
             }
-        } else if (mode == 4) { // ★筆モード (短い線分の連続)
+        } else if (mode == 4) { // 筆モード (短い線分の連続)
             if (currentX != this.x || currentY != this.y) {
                 // 前の地点(x, y)から現在の地点(currentX, currentY)まで線を引く
                 Line l = new Line();
@@ -263,6 +267,7 @@ public class PaintCanvas extends JPanel implements MouseListener, MouseMotionLis
     public void save(String fname) {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fname))) {
             oos.writeObject(objList);
+            System.out.println("保存完了: " + fname);
         } catch (IOException e) {
             System.err.println("保存エラー: " + e.getMessage());
         }
